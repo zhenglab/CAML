@@ -17,7 +17,7 @@ D_LR: 0.0002
 E_LR: 0.00005
 BETA1: 0.0                    # adam optimizer beta1
 BETA2: 0.9                    # adam optimizer beta2
-BATCH_SIZE: 1                 # input batch size for training
+BATCH_SIZE: 4                 # input batch size for training
 INPUT_SIZE: 256               # input image size for training 0 for original size
 MAX_ITERS: 500000             # maximum number of iterations to train the model
 CENTER: 0
