@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import torch.nn.functional as F
 from .metrics import PSNR
 
-class ImagineGAN():
+class CAML():
     def __init__(self, config):
         self.config = config
         self.model_name = 'Network'

@@ -6,7 +6,7 @@ import torch
 import argparse
 from shutil import copyfile
 from src.config import Config
-from src.ImagineGAN import ImagineGAN
+from src.caml import CAML
 
 def main(mode=None):
     
@@ -33,7 +33,7 @@ def main(mode=None):
     np.random.seed(config.SEED)
     random.seed(config.SEED)
 
-    model = ImagineGAN(config)
+    model = CAML(config)
     
     model.load()
     
