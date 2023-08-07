@@ -9,7 +9,6 @@ from .utils import Progbar, create_dir, stitch_images, imsave, template_match
 from PIL import Image
 from tensorboardX import SummaryWriter
 import torch.nn.functional as F
-from thop import profile
 from .metrics import PSNR
 
 class ImagineGAN():
@@ -151,7 +150,6 @@ class ImagineGAN():
             data, pdata, mask = self.cuda(*it)
 
             output, mask_logit, mask_soft, mask_pred = self.Model(pdata)
-            flops, params = profile(self.Model, inputs=(pdata, ))
         
             data = self.postprocess_re(data)[0]
             pdata = self.postprocess_re(pdata)[0]
@@ -167,7 +165,6 @@ class ImagineGAN():
             print(index, name)
 
         print('bce avg > {}'.format(total_bce / total))
-        print("%.2fM" % (flops/1e6), "%.5fM" % (params/1e6))
         print('\nEnd test....')
         
     def log(self, logs):

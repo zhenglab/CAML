@@ -110,7 +110,7 @@ class Network(BaseModel):
         if self.ite % self.config.N_UPDATE_E == 0:
 
             fea_I0 = self.g(pdata)
-            mask_logit, mask_soft, mask_pred, fea_Ei = self.e(pdata, fea_I0.detach())  
+            mask_logit, mask_soft, mask_pred, fea_Ei = self.e(pdata, fea_I0[0].detach(), fea_I0[1].detach(), fea_I0[2].detach())  
             output = self.g(pdata, mask_soft, fea_Ei[0], fea_Ei[1], fea_Ei[2]) 
 
             # g bce loss
@@ -129,7 +129,7 @@ class Network(BaseModel):
 ########################################Inpainting##########################################
         if self.ite % self.config.N_UPDATE_I == 0:
             fea_I0 = self.g(pdata)
-            mask_logit, mask_soft, mask_pred, fea_Ei = self.e(pdata, fea_I0)  
+            mask_logit, mask_soft, mask_pred, fea_Ei = self.e(pdata, fea_I0[0], fea_I0[1], fea_I0[2])  
             output = self.g(pdata, mask_soft.detach(), fea_Ei[0].detach(), fea_Ei[1].detach(), fea_Ei[2].detach()) 
 
             #### D loss####
@@ -199,6 +199,6 @@ class Network(BaseModel):
 
     def forward(self, input):
         fea_I0 = self.g(input)
-        mask_logit, mask_soft, mask_pred, fea_Ei = self.e(input, fea_I0)  
+        mask_logit, mask_soft, mask_pred, fea_Ei = self.e(input, fea_I0[0], fea_I0[1], fea_I0[2])  
         output = self.g(input, mask_soft, fea_Ei[0], fea_Ei[1], fea_Ei[2])  
         return output, mask_logit, mask_soft, mask_pred

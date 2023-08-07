@@ -12,7 +12,7 @@ NOISE_TRAIN_AUX:
 NOISE_VAL_FLIST: ./dataset/FFHQ/test/noise.flist
 
 LR: 0.0002                    # learning rate
-G_LR: 0.00005
+G_LR: 0.0001
 D_LR: 0.0002
 E_LR: 0.00005
 BETA1: 0.0                    # adam optimizer beta1

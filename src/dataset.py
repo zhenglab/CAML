@@ -118,11 +118,11 @@ class Dataset(torch.utils.data.Dataset):
 
         coin = self.coin
 
-        if coin > 0.5:
-            mask_used = mask_soft
-        else:
-            mask_used = mask_tensor
-
+        # if coin > 0.5:
+        #     mask_used = mask_soft
+        # else:
+        #     mask_used = mask_tensor
+        mask_used = mask_soft
         if self.augment and np.random.binomial(1, 0.5) > 0:
             data = data[:, ::-1, ...]
 
@@ -157,11 +157,11 @@ class Dataset(torch.utils.data.Dataset):
         mask_soft = torch.squeeze(mask_soft, dim=0)
 
         coin = self.coin
-        if coin > 0.5:
-            mask_used = mask_soft
-        else:
-            mask_used = mask_tensor
-
+        # if coin > 0.5:
+        #     mask_used = mask_soft
+        # else:
+        #     mask_used = mask_tensor
+        mask_used = mask_soft
         data = self.to_tensor(data)
         noise = self.to_tensor(noise)
 
