@@ -10,7 +10,7 @@ This repository provides the official PyTorch implementation of our paper "Conte
 
 ## Prerequisites
 
-![Alt text](https://vscode-remote%252Bssh-002dremote-002b8.vscode-resource.vscode-cdn.net/data/zhr/acmm_blind/checkpoints/place2_sota_aot_new_graffity/results0_tcsvt_graft/output/Places365_val_00003607.jpg?version%253D1691329185259)- Linux
+- Linux
 - Python 3.7
 - NVIDIA GPU + CUDA CuDNN
 
