@@ -6,7 +6,7 @@ This repository provides the official PyTorch implementation of our paper "Conte
 
 - Qualitative comparison results of unseen contaminated patterns for blind image inpainting.
 
-<img src="imgs/unseen.png" width=800 height=1500/>
+<img src="unseen.png" width=800 height=1500/>
 
 ## Prerequisites
 
