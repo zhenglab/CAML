@@ -175,15 +175,15 @@ class Network(BaseModel):
             f_loss += g_mrf_loss
 
             g_loss = c_loss + f_loss
+        
+            g_loss.backward(retain_graph=True)
+            self.g_optimizer.step()
 
             d_loss.backward()
             self.d_optimizer.step()
 
             d_p_loss.backward()
             self.d_p_optimizer.step()
-
-            g_loss.backward()
-            self.g_optimizer.step()
 
             logs = [
                 ("l_e", self.e_loss.item()),

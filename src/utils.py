@@ -96,7 +96,7 @@ def np_free_form_mask(h, w, maxVertex, maxLength, maxBrushWidth, maxAngle):
     cv2.circle(mask, (startY, startX), brushWidth // 2, 2)
     return mask
 
-def free_form_mask(h, w, parts=8, maxVertex=16, maxLength=80, maxBrushWidth=20, maxAngle=360):
+def free_form_mask(h, w, parts=8, maxVertex=16, maxLength=np.random.randint(20, 80), maxBrushWidth=np.random.randint(20, 30), maxAngle=360):
     mask = np.zeros((h, w), np.float32)
     for i in range(parts):
         p = np_free_form_mask(h, w, maxVertex, maxLength, maxBrushWidth, maxAngle)

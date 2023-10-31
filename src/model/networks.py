@@ -293,13 +293,11 @@ class EstimatingResBlock(nn.Module):
         
         dim = 256
         self.block1 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
-        self.block2 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
-        self.block3 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=2, dilation=2)
-        self.block4 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=4, dilation=4)
-        self.block5 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=6, dilation=6)
-        self.block6 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=8, dilation=8)
-        self.block7 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
-        self.block8 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
+        self.block2 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=2, dilation=2)
+        self.block3 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=4, dilation=4)
+        self.block4 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=6, dilation=6)
+        self.block5 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=8, dilation=8)
+        self.block6 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
         
     def forward(self, x):
         block1 = self.block1(x)
@@ -307,33 +305,27 @@ class EstimatingResBlock(nn.Module):
         block3 = self.block3(block2)
         block4 = self.block4(block3)
         block5 = self.block5(block4)
-        block6 = self.block6(block5)
-        block7 = self.block7(block6)
-        out = self.block8(block7)  
+        out = self.block6(block5)
         return out       
 
 class InpaintingResBlock(nn.Module):
     def __init__(self):
         super(InpaintingResBlock, self).__init__()
-        
+
         self.block1 = ResnetBlock(dim=256, dilation=1)
-        self.block2 = ResnetBlock(dim=256, dilation=1)
-        self.block3 = ResnetBlock(dim=256, dilation=2)
-        self.block4 = ResnetBlock(dim=256, dilation=4)
-        self.block5 = ResnetBlock(dim=256, dilation=6)
-        self.block6 = ResnetBlock(dim=256, dilation=8)
-        self.block7 = ResnetBlock(dim=256, dilation=1)
-        self.block8 = ResnetBlock(dim=256, dilation=1)
-        
+        self.block2 = ResnetBlock(dim=256, dilation=2)
+        self.block3 = ResnetBlock(dim=256, dilation=4)
+        self.block4 = ResnetBlock(dim=256, dilation=6)
+        self.block5 = ResnetBlock(dim=256, dilation=8)
+        self.block6 = ResnetBlock(dim=256, dilation=1)
+
     def forward(self, x):
         block1 = self.block1(x)
         block2 = self.block2(block1)
         block3 = self.block3(block2)
         block4 = self.block4(block3)
         block5 = self.block5(block4)
-        block6 = self.block6(block5)
-        block7 = self.block7(block6)
-        out = self.block8(block7)  
+        out = self.block6(block5)
         return out
 
 class ResnetBlock(nn.Module):

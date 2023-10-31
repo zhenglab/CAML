@@ -69,11 +69,9 @@ class CAML():
                 data, pdata, mask = self.cuda(*it)
 
                 output, mask_pred, e_loss, d_loss, d_p_loss, g_loss, logs = self.Model.process(data, pdata, mask, ite)
-                psnr = self.psnr(self.postprocess(data), self.postprocess(output))
-                mae = (torch.sum(torch.abs(mask - mask_pred)) / torch.sum(mask)).float()
-                                
-                ite = self.Model.iteration
                 
+                ite = self.Model.iteration
+
                 # ------------------------------------------------------------------------------------
                 # end training
                 
@@ -83,8 +81,6 @@ class CAML():
 
                 # ------------------------------------------------------------------------------------
                 # save log & sample & eval & save model
-                logs.append(('psnr', psnr.item()))
-                logs.append(('mae', mae.item()))
                     
                 logs = [("epoch", epoch), ("iter", ite)] + logs
                 self.writer.add_scalars('BCE', {'domaink': e_loss}, epoch)
@@ -137,9 +133,6 @@ class CAML():
         total = len(self.val_dataset)
 
         index = 0
-        total_bce = 0
-        total_mae = 0
-        progbar = Progbar(total, width=20, stateful_metrics=['it'])
         
         for it in test_loader:
             
@@ -164,7 +157,6 @@ class CAML():
             imsave(output, os.path.join(state_results, name))
             print(index, name)
 
-        print('bce avg > {}'.format(total_bce / total))
         print('\nEnd test....')
         
     def log(self, logs):

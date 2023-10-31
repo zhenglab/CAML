@@ -45,22 +45,18 @@ class Dataset(torch.utils.data.Dataset):
             np.random.shuffle(self.noise_file)
 
         self.mask_type = config.MASK_TYPE
-        if self.training == False:
+        if mask_flist is not None:
             self.mask_file = getFileList(mask_flist)
+        else:
+            self.mask_file = None
         self.side = config.SIDE
         self.mean = config.MEAN
         self.std = config.STD
         self.count = 0
         self.pos = None
         self.batchsize = batchsize
-        self.catmask = config.CATMASK
         self.datatype = config.DATATYPE
-        self.coin = torch.rand(1)[0]
-        if self.datatype == 2:
-            self.scence_width = 512
-            self.scence_height = 256
-        self.known_mask = not training
- 
+
     def __len__(self):
         return len(self.data_file)
     
@@ -116,13 +112,13 @@ class Dataset(torch.utils.data.Dataset):
         mask_soft = self.priority_mask(1 - mask_tensor) + mask_tensor
         mask_soft = torch.squeeze(mask_soft, dim=0)
 
-        coin = self.coin
+        coin = torch.rand(1)[0]
 
-        # if coin > 0.5:
-        #     mask_used = mask_soft
-        # else:
-        #     mask_used = mask_tensor
-        mask_used = mask_soft
+        if coin > 0.5:
+            mask_used = mask_soft
+        else:
+            mask_used = mask_tensor
+            
         if self.augment and np.random.binomial(1, 0.5) > 0:
             data = data[:, ::-1, ...]
 
@@ -144,8 +140,12 @@ class Dataset(torch.utils.data.Dataset):
             noise = noise.repeat(3, axis=2)   
         data = cv2.resize(data, (self.input_size, self.input_size))
         noise = cv2.resize(noise, (self.input_size, self.input_size))
-        mask = imread(self.mask_file[index])
-
+        
+        if self.mask_file is not None:
+            mask = imread(self.mask_file[index])
+        else:
+            mask = free_form_mask(h=self.input_size, w=self.input_size)
+            
         h, w = data.shape[:2]
         grid = 4
         data = data[:h // grid * grid, :w // grid * grid, :]
@@ -156,12 +156,13 @@ class Dataset(torch.utils.data.Dataset):
         mask_soft = self.priority_mask(1 - mask_tensor) + mask_tensor
         mask_soft = torch.squeeze(mask_soft, dim=0)
 
-        coin = self.coin
-        # if coin > 0.5:
-        #     mask_used = mask_soft
-        # else:
-        #     mask_used = mask_tensor
-        mask_used = mask_soft
+        coin = torch.rand(1)[0]
+        
+        if coin > 0.5:
+            mask_used = mask_soft
+        else:
+            mask_used = mask_tensor
+        
         data = self.to_tensor(data)
         noise = self.to_tensor(noise)
 
