@@ -6,11 +6,11 @@ This repository provides the official PyTorch implementation of our paper "Conte
 
 - Qualitative comparison results of unseen contaminated patterns for blind image inpainting.
 
-<img src="imgs/ffhq.png" width=800 height=280/>
-<img src="imgs/celebahq.png" width=800 height=280/>
-<img src="imgs/imagenet.png" width=800 height=280/>
-<img src="imgs/paris.png" width=800 height=280/>
-<img src="imgs/places2.png" width=800 height=280/>
+<img src="imgs/ffhq.png" width=800 height=300/>
+<img src="imgs/celebahq.png" width=800 height=300/>
+<img src="imgs/imagenet.png" width=800 height=300/>
+<img src="imgs/paris.png" width=800 height=300/>
+<img src="imgs/places2.png" width=800 height=300/>
 
 ## Prerequisites
 
@@ -47,4 +47,8 @@ python test.py --path=$configpath$
 
 For example: python test.py --path=./checkpoints/
 ```
+
+### Pre-trained Models
+
+- Download pre-trained models from [BaiduCloud](https://pan.baidu.com/s/1-VzOl35c7NYaUprAwRXoQw?pwd=7qmx) (access code: 7qmx), and put `g.pth` `e.pth` `d.pth` `dp.pth` in the directory `checkpoints`.
 

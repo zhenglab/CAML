@@ -47,45 +47,65 @@ class BasicConv2d(nn.Module):
         x = self.bn(x)
         return self.relu(x)  
 
-class Estimating(nn.Module):
+class Estimation(nn.Module):
     def __init__(self, config, in_channels=3, dim=256):
-        super(Estimating, self).__init__()
+        super(Estimation, self).__init__()        
         if config.MODE == 1:
             self.batch_size = config.BATCH_SIZE
         else:
             self.batch_size = 1
-        self.encoder0 = MaskResBlock(fin=3, fout=64, kernel_size=3, stride=1, padding=1)
-        self.encoder1 = MaskResBlock(fin=64, fout=128, kernel_size=3, stride=2, padding=1)
-        self.encoder2 = MaskResBlock(fin=128, fout=dim, kernel_size=3, stride=2, padding=1)
+        self.encoder0 = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=1, padding=3),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True))
 
-        self.igcm0 = IGCM_Learner(channels=64, batchsize=self.batch_size, norm=nn.BatchNorm2d)
-        self.igcm1 = IGCM_Learner(channels=128, batchsize=self.batch_size, norm=nn.BatchNorm2d)
-        self.igcm2 = IGCM_Learner(channels=256, batchsize=self.batch_size, norm=nn.BatchNorm2d)
+        self.encoder1 = nn.Sequential( 
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True))
 
-        self.estimating_res = EstimatingResBlock()
+        self.encoder2 = nn.Sequential(             
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True))
+        
+        self.irb1 = IRB(channels=64, batchsize=self.batch_size, norm=nn.BatchNorm2d)
+        self.irb2 = IRB(channels=128, batchsize=self.batch_size, norm=nn.BatchNorm2d)
+        self.irb3 = IRB(channels=256, batchsize=self.batch_size, norm=nn.BatchNorm2d)
+        
+        self.mid = Estimate_ResBlock()
         
         self.decoder = nn.Sequential(
-            nn.UpsamplingNearest2d(scale_factor=2),
-            MaskResBlock(fin=256, fout=128, kernel_size=3, stride=1, padding=1),
-            nn.UpsamplingNearest2d(scale_factor=2),
-            MaskResBlock(fin=128, fout=64, kernel_size=3, stride=1, padding=1),
-            nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, stride=1, padding=1)
-        )
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(in_channels=256, out_channels=128, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+
+            nn.Conv2d(in_channels=64, out_channels=1, kernel_size=7, stride=1, padding=3))
+        
         self.sigmoid = nn.Sigmoid()
+
 
     def forward(self, x, fea_en0, fea_en1, fea_en2):
         mask_en0 = self.encoder0(x)
-        mask_cre0 = self.igcm0(mask_en0, fea_en0)
-        mask_en1 = self.encoder1(mask_cre0)
-        mask_cre1 = self.igcm1(mask_en1, fea_en1)
-        mask_en2 = self.encoder2(mask_cre1)
-        mask_cre2 = self.igcm2(mask_en2, fea_en2)
-
-        mid_x = self.estimating_res(mask_cre2)
-
-        mask_logit = self.decoder(mid_x)
+        mask_cre1 = self.irb1(mask_en0, fea_en0)
         
+        mask_en1 = self.encoder1(mask_cre1)
+        mask_cre2 = self.irb2(mask_en1, fea_en1)
+        
+        mask_en2 = self.encoder2(mask_cre2)
+        mask_cre3 = self.irb3(mask_en2, fea_en2)
+        
+        mid = self.mid(mask_cre3)
+        
+        mask_logit = self.decoder(mid)
         mask_soft = self.sigmoid(mask_logit)
+        
         mask_pred = torch.clamp(mask_logit, 0., 1.)
 
         return mask_logit, mask_soft, mask_pred, [mask_en0, mask_en1, mask_en2]
@@ -99,24 +119,24 @@ class Inpainting(BaseNetwork):
             self.batch_size = 1
 
         self.encoder0 = nn.Sequential(
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, padding=0),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=1, padding=3),
             nn.InstanceNorm2d(64, track_running_stats=False),
             nn.ReLU(True))
 
         self.encoder1 = nn.Sequential( 
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=4, stride=2, padding=1),
             nn.InstanceNorm2d(128, track_running_stats=False),
             nn.ReLU(True))
 
         self.encoder2 = nn.Sequential(             
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=4, stride=2, padding=1),
             nn.InstanceNorm2d(256, track_running_stats=False),
             nn.ReLU(True))
 
-        self.inpaint_res = InpaintingResBlock()
+
+        self.mid = Inpaint_ResBlock()
         
-        self.inpaint_decoder = nn.Sequential(
+        self.decoder = nn.Sequential(
             nn.Upsample(scale_factor=2),
             nn.Conv2d(in_channels=256, out_channels=128, kernel_size=5, stride=1, padding=2),
             nn.InstanceNorm2d(128, track_running_stats=False),
@@ -130,11 +150,12 @@ class Inpainting(BaseNetwork):
             nn.Conv2d(in_channels=64, out_channels=3, kernel_size=7, stride=1, padding=3)    )
                 
         self.tanh = nn.Tanh()    
-        self.egcm0 = EGCM_Learner(channels=64, batchsize=self.batch_size)
-        self.egcm1 = EGCM_Learner(channels=128, batchsize=self.batch_size)
-        self.egcm2 = EGCM_Learner(channels=256, batchsize=self.batch_size)
+        self.aib0 = AIB(batch_size=self.batch_size, in_ch=64, out_ch=8, ksize=1, stride=1)
+        self.aib1 = AIB(batch_size=self.batch_size, in_ch=128, out_ch=8, ksize=1, stride=1)
+        self.aib2 = AIB(batch_size=self.batch_size, in_ch=256, out_ch=8, ksize=1, stride=1)
         self.down1 = nn.UpsamplingNearest2d(scale_factor=.5)
         self.down2 = nn.UpsamplingNearest2d(scale_factor=.25)
+
         self.init_weights()
 
     def forward(self, x, mask=None, mask_en0=None, mask_en1=None, mask_en2=None):  
@@ -142,45 +163,23 @@ class Inpainting(BaseNetwork):
         x_en1 = self.encoder1(x_en0)
         x_en2 = self.encoder2(x_en1)
         if mask is not None:
-            fea_cre0 = self.egcm0(x_en0, mask_en0, mask)
+            fea_cre0 = self.aib0(x_en0, mask_en0, mask)
             x_en1 = self.encoder1(fea_cre0)
-            fea_cre1 = self.egcm1(x_en1, mask_en1, self.down1(mask))
+            fea_cre1 = self.aib1(x_en1, mask_en1, self.down1(mask))
             x_en2 = self.encoder2(fea_cre1)
-            fea_cre2 = self.egcm2(x_en2, mask_en2, self.down2(mask))
-            mid_x = self.inpaint_res(fea_cre2)
-            de_x = self.inpaint_decoder(mid_x)
-            output = self.tanh(de_x)
+            fea_cre2 = self.aib2(x_en2, mask_en2, self.down2(mask))
+            x = self.mid(fea_cre2)
+            x = self.decoder(x)
+            output = self.tanh(x)
         return [x_en0, x_en1, x_en2] if mask is None else output
 
 
-class IGCM_Learner(nn.Module):
+# IGCM_Learner -> CMAT_Block
+# EGCM_Learner -> CMAT_Block
+
+class IRB(nn.Module):
     def __init__(self, channels, batchsize, norm = nn.BatchNorm2d):
-        super(IGCM_Learner, self).__init__()
-        self.channles = channels
-        self.batchsize = batchsize
-        self.norm = norm
-        self.cmat = CMAT_Block(channels=self.channles, batchsize=self.batchsize, norm=self.norm)
-    def forward(self, F_E0, F_I0):
-        out = self.cmat(F_E0, F_I0)
-        return out
-
-class EGCM_Learner(nn.Module):
-    def __init__(self, channels, batchsize, norm = nn.InstanceNorm2d):
-        super(EGCM_Learner, self).__init__()
-        self.channles = channels
-        self.batchsize = batchsize
-        self.norm = norm
-        self.cmat = CMAT_Block(channels=self.channles, batchsize=self.batchsize, norm=self.norm)
-        self.cmaf = CMAF_Block(in_ch=self.channles)
-    def forward(self, F_I, F_E, mask):
-        mutual_0 = self.cmat(F_I, F_E)
-        out = self.cmaf(mutual_0, mask)
-        return out
-
-
-class CMAT_Block(nn.Module):
-    def __init__(self, channels, batchsize, norm = nn.BatchNorm2d):
-        super(CMAT_Block, self).__init__()
+        super(IRB, self).__init__()
         self.batchsize = batchsize
         self.channels = channels
         self.add_conv = nn.Conv2d(in_channels=channels*2, out_channels=channels, kernel_size=1, stride=1, bias=False)
@@ -221,26 +220,30 @@ class CMAT_Block(nn.Module):
             res = self.conv1x1_U(x1)
             res = self.adaptive_conv_9(res, param)
             res = self.conv1x1_V(res) 
-            res = res + x1
+            res = res + x1       
                 
         if h == 128:
             param = self.param_adapter(x2)
             res = self.conv1x1_U(x1)
             res = self.adaptive_conv_5(res, param)
             res = self.conv1x1_V(res) 
-            res = res + x1
+            res = res + x1        
+
 
         if h == 64:
             param = self.param_adapter(x2)
             res = self.conv1x1_U(x1)
             res = self.adaptive_conv_3(res, param)
             res = self.conv1x1_V(res) 
-            res = res + x1
+            res = res + x1        
+
         return res
 
-class CMAF_Block(nn.Module):
-    def __init__(self, in_ch=256, out_ch=8, ksize=1, stride=1):
-        super(CMAF_Block, self).__init__()
+# EGCM_Learner -> CMAF_Block
+
+class AIB(nn.Module):
+    def __init__(self, batch_size, in_ch=256, out_ch=8, ksize=1, stride=1):
+        super(AIB, self).__init__()
         pad = (ksize - 1) // 2
  
         self.add_coni = nn.Sequential(
@@ -254,8 +257,10 @@ class CMAF_Block(nn.Module):
             nn.ReLU(inplace=True)
         )
         self.weight_levels = nn.Conv2d(out_ch*2, 2, kernel_size=1, stride=1, padding=0)
+        self.irb = IRB(channels=in_ch, batchsize=batch_size, norm=nn.InstanceNorm2d)
 
-    def forward(self, cre_context, mask):
+    def forward(self, fea_cat, mask_cat, mask):
+        cre_context = self.irb(fea_cat, mask_cat)
 
         input = cre_context * mask
         minput = cre_context * (1-mask)
@@ -270,54 +275,17 @@ class CMAF_Block(nn.Module):
         return fused_out
 
 
-class MaskResBlock(nn.Module):
-    def __init__(self, fin, fout, kernel_size=3, stride=1, padding=0, dilation=1):
-        super(MaskResBlock, self).__init__()
-        self.rule = nn.ELU()
-        self.conv0 = nn.Conv2d(fin, fout, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
-        self.conv1 = nn.Conv2d(fout, fout, kernel_size=kernel_size, stride=1, padding=padding, dilation=dilation)
-        self.conv2 = nn.Conv2d(fin, fout, 1, stride=stride, dilation=1)
-        
-    def forward(self, x):
-        x_b = self.conv0(x)
-        x_b = self.rule(x_b)
-        x_b = self.conv1(x_b)
-        x = self.conv2(x)
-        x = x + x_b
-        x = self.rule(x)
-        return x        
-    
-class EstimatingResBlock(nn.Module):
+class Estimate_ResBlock(nn.Module):
     def __init__(self):
-        super(EstimatingResBlock, self).__init__()
-        
-        dim = 256
-        self.block1 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
-        self.block2 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=2, dilation=2)
-        self.block3 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=4, dilation=4)
-        self.block4 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=6, dilation=6)
-        self.block5 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=8, dilation=8)
-        self.block6 = MaskResBlock(fin=dim, fout=dim, kernel_size=3, stride=1, padding=1)
-        
-    def forward(self, x):
-        block1 = self.block1(x)
-        block2 = self.block2(block1)
-        block3 = self.block3(block2)
-        block4 = self.block4(block3)
-        block5 = self.block5(block4)
-        out = self.block6(block5)
-        return out       
-
-class InpaintingResBlock(nn.Module):
-    def __init__(self):
-        super(InpaintingResBlock, self).__init__()
-
-        self.block1 = ResnetBlock(dim=256, dilation=1)
-        self.block2 = ResnetBlock(dim=256, dilation=2)
-        self.block3 = ResnetBlock(dim=256, dilation=4)
-        self.block4 = ResnetBlock(dim=256, dilation=6)
-        self.block5 = ResnetBlock(dim=256, dilation=8)
-        self.block6 = ResnetBlock(dim=256, dilation=1)
+        super(Estimate_ResBlock, self).__init__()
+        self.block1 = Estimate_ResnetBlock(dim=256, dilation=1)
+        self.block2 = Estimate_ResnetBlock(dim=256, dilation=1)
+        self.block3 = Estimate_ResnetBlock(dim=256, dilation=2)
+        self.block4 = Estimate_ResnetBlock(dim=256, dilation=4)
+        self.block5 = Estimate_ResnetBlock(dim=256, dilation=6)
+        self.block6 = Estimate_ResnetBlock(dim=256, dilation=8)
+        self.block7 = Estimate_ResnetBlock(dim=256, dilation=1)
+        self.block8 = Estimate_ResnetBlock(dim=256, dilation=1)
 
     def forward(self, x):
         block1 = self.block1(x)
@@ -325,38 +293,82 @@ class InpaintingResBlock(nn.Module):
         block3 = self.block3(block2)
         block4 = self.block4(block3)
         block5 = self.block5(block4)
-        out = self.block6(block5)
+        block6 = self.block6(block5)
+        block7 = self.block7(block6)
+        out = self.block8(block7)
         return out
 
-class ResnetBlock(nn.Module):
-    def __init__(self, dim, dilation=1, use_spectral_norm=False, use_dropout=False):
-        super(ResnetBlock, self).__init__()
+class Estimate_ResnetBlock(nn.Module):
+    def __init__(self, dim, dilation, use_spectral_norm=False, use_dropout=False):
+        super(Estimate_ResnetBlock, self).__init__()
         conv_block = [
             nn.ReflectionPad2d(dilation),
-            spectral_norm(nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, padding=0, dilation=dilation, bias=not use_spectral_norm), use_spectral_norm),
-            nn.InstanceNorm2d(dim, track_running_stats=False),
-            nn.ReLU(True),
+            nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, padding=0, dilation=dilation, bias=not use_spectral_norm),
+            nn.BatchNorm2d(dim),
+            nn.ReLU(inplace=False),
 
             nn.ReflectionPad2d(1),
-            spectral_norm(nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, padding=0, dilation=1, bias=not use_spectral_norm), use_spectral_norm),
-            nn.InstanceNorm2d(dim, track_running_stats=False),
+            nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, padding=0, dilation=1, bias=not use_spectral_norm),
+            nn.BatchNorm2d(dim),
          ]
         
         if use_dropout:
-            conv_block += [nn.Dropout(0.5)]
+            conv_block = conv_block + [nn.Dropout(0.5)]
             
         self.conv_block = nn.Sequential(*conv_block)
 
     def forward(self, x):
         out = x + self.conv_block(x)
-
         return out
 
-def spectral_norm(module, mode=True):
-    if mode:
-        return nn.utils.spectral_norm(module)
 
-    return module
+class Inpaint_ResBlock(nn.Module):
+    def __init__(self):
+        super(Inpaint_ResBlock, self).__init__()
+        self.block1 = Inpaint_ResnetBlock(dim=256, dilation=1)
+        self.block2 = Inpaint_ResnetBlock(dim=256, dilation=1)
+        self.block3 = Inpaint_ResnetBlock(dim=256, dilation=2)
+        self.block4 = Inpaint_ResnetBlock(dim=256, dilation=4)
+        self.block5 = Inpaint_ResnetBlock(dim=256, dilation=6)
+        self.block6 = Inpaint_ResnetBlock(dim=256, dilation=8)
+        self.block7 = Inpaint_ResnetBlock(dim=256, dilation=1)
+        self.block8 = Inpaint_ResnetBlock(dim=256, dilation=1)
+
+    def forward(self, x):
+        block1 = self.block1(x)
+        block2 = self.block2(block1)
+        block3 = self.block3(block2)
+        block4 = self.block4(block3)
+        block5 = self.block5(block4)
+        block6 = self.block6(block5)
+        block7 = self.block7(block6)
+        out = self.block8(block7)
+        return out
+
+
+class Inpaint_ResnetBlock(nn.Module):
+    def __init__(self, dim, dilation, use_spectral_norm=False, use_dropout=False):
+        super(Inpaint_ResnetBlock, self).__init__()
+        conv_block = [
+            nn.ReflectionPad2d(dilation),
+            nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, padding=0, dilation=dilation, bias=not use_spectral_norm),
+            nn.InstanceNorm2d(dim, track_running_stats=False),
+            nn.ReLU(inplace=False),
+
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, padding=0, dilation=1, bias=not use_spectral_norm),
+            nn.InstanceNorm2d(dim, track_running_stats=False),
+         ]
+        
+        if use_dropout:
+            conv_block = conv_block + [nn.Dropout(0.5)]
+            
+        self.conv_block = nn.Sequential(*conv_block)
+
+    def forward(self, x):
+        out = x + self.conv_block(x)
+        return out
+
 
 
 class _ConvNd(nn.Module):

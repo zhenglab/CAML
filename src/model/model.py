@@ -64,9 +64,9 @@ class BaseModel(nn.Module):
 class Network(BaseModel):
     def __init__(self, config):
         super(Network, self).__init__('Network', config)
-
+        
         g = Inpainting(config)
-        e = Estimating(config)
+        e = Estimation(config)
         d_p = MultiscaleDiscriminator()
         d = DenseD()
 
