@@ -96,12 +96,30 @@ def np_free_form_mask(h, w, maxVertex, maxLength, maxBrushWidth, maxAngle):
     cv2.circle(mask, (startY, startX), brushWidth // 2, 2)
     return mask
 
-def free_form_mask(h, w, parts=8, maxVertex=16, maxLength=np.random.randint(20, 80), maxBrushWidth=np.random.randint(20, 30), maxAngle=360):
+def generate_square_mask(h, w, square_size=64, value=1.0):
+    """Create a square mask with `value` on the masked region."""
+    mask = np.zeros((h, w), dtype=np.float32)
+
+    square_size = min(square_size, h, w)
+    max_x = w - square_size
+    max_y = h - square_size
+
+    x = np.random.randint(0, max_x + 1)
+    y = np.random.randint(0, max_y + 1)
+
+    mask[y:y + square_size, x:x + square_size] = value
+    return mask
+
+def free_form_mask(h, w, parts=8, maxVertex=16, maxLength=np.random.randint(20, 80), maxBrushWidth=np.random.randint(20, 30), maxAngle=360, square_size=64, square_prob=0.3):
     mask = np.zeros((h, w), np.float32)
     for i in range(parts):
         p = np_free_form_mask(h, w, maxVertex, maxLength, maxBrushWidth, maxAngle)
         mask = mask + p
     mask = np.minimum(mask, 1.0)
+    if square_prob > 0 and np.random.rand() < square_prob:
+        square = generate_square_mask(h, w, square_size=square_size, value=1.0)
+        # Overlay the square so it cannot be lost during normalization
+        mask = np.maximum(mask, square)
     return mask
 
 def generate_mask_stroke(im_size, parts=16, maxVertex=24, maxLength=100, maxBrushWidth=24, maxAngle=360):
@@ -111,6 +129,7 @@ def generate_mask_stroke(im_size, parts=16, maxVertex=24, maxLength=100, maxBrus
         mask = mask + np_free_form_mask( h, w, maxVertex, maxLength, maxBrushWidth, maxAngle)
     mask = np.minimum(mask, 1.0)
     return mask
+
 
 
 def generate_noise(image, noise_type="gauss"):
@@ -596,5 +615,3 @@ def extract_image_patches(images, ksizes, strides, rates, padding='same'):
                              stride=strides)
     patches = unfold(images)
     return patches  # [N, C*k*k, L], L is the total number of such blocks
-
-
