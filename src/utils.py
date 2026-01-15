@@ -96,11 +96,16 @@ def np_free_form_mask(h, w, maxVertex, maxLength, maxBrushWidth, maxAngle):
     cv2.circle(mask, (startY, startX), brushWidth // 2, 2)
     return mask
 
-def generate_square_mask(h, w, square_size=64, value=1.0):
+def generate_square_mask(h, w, square_size=None, value=1.0):
     """Create a square mask with `value` on the masked region."""
     mask = np.zeros((h, w), dtype=np.float32)
 
-    square_size = min(square_size, h, w)
+    max_side = max(1, int(min(h, w) * 2 / 3))
+    if square_size is None:
+        square_size = np.random.randint(1, max_side + 1)
+    else:
+        square_size = int(np.clip(square_size, 1, max_side))
+
     max_x = w - square_size
     max_y = h - square_size
 
@@ -110,7 +115,7 @@ def generate_square_mask(h, w, square_size=64, value=1.0):
     mask[y:y + square_size, x:x + square_size] = value
     return mask
 
-def free_form_mask(h, w, parts=8, maxVertex=16, maxLength=np.random.randint(20, 80), maxBrushWidth=np.random.randint(20, 30), maxAngle=360, square_size=64, square_prob=0.3):
+def free_form_mask(h, w, parts=8, maxVertex=16, maxLength=np.random.randint(20, 80), maxBrushWidth=np.random.randint(20, 30), maxAngle=360, square_size=None, square_prob=0.3):
     mask = np.zeros((h, w), np.float32)
     for i in range(parts):
         p = np_free_form_mask(h, w, maxVertex, maxLength, maxBrushWidth, maxAngle)
@@ -162,7 +167,7 @@ def generate_rectangle(h, w):
     startY = np.random.randint(0, h-crop_size)
     startX = np.random.randint(0, w-crop_size)
     mask[startY: startY+crop_size, startX: startX+crop_size] = 0
-    return mask 
+    return 1 - mask 
     
 def generate_graffiti(h, w, noise):
     mask = np.ones((h, w))
